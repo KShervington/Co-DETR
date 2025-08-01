@@ -1,0 +1,41 @@
+[
+  {
+    "img-name": "1869--1.png",
+    "Latitude": 40.774248,
+    "Longitude": -73.670624,
+    "ID": "Skyline-1869",
+    "Name": "I-495 at Shelter Rock Rd",
+    "DirectionOfTravel": "Eastbound",
+    "RoadwayName": "I-495",
+    "Url": "https://511ny.org/map/Cctv/1869--1",
+    "VideoUrl": "https://s52.nysdot.skyvdn.com:443/rtplive/R10_013/playlist.m3u8",
+    "Disabled": false,
+    "Blocked": false
+  },
+  {
+    "img-name": "4616433--17.png",
+    "Latitude": 40.756691,
+    "Longitude": -73.986476,
+    "ID": "NYSDOT-4616433",
+    "Name": "7 Ave @ 43 Street",
+    "DirectionOfTravel": "Both Directions",
+    "RoadwayName": "New York County",
+    "Url": "https://511ny.org/map/Cctv/4616433--17",
+    "VideoUrl": null,
+    "Disabled": false,
+    "Blocked": false
+  },
+  {
+    "img-name": "4616434--17.png",
+    "Latitude": 40.759643,
+    "Longitude": -73.983564,
+    "ID": "NYSDOT-4616434",
+    "Name": "7 Avenue @ 49 Street",
+    "DirectionOfTravel": "Both Directions",
+    "RoadwayName": "New York County",
+    "Url": "https://511ny.org/map/Cctv/4616434--17",
+    "VideoUrl": null,
+    "Disabled": false,
+    "Blocked": false
+  }
+]
