@@ -1,0 +1,75 @@
+# Use the same proven base and versions as the working Dockerfile
+ARG PYTORCH="1.11.0"
+ARG CUDA="11.3"
+ARG CUDNN="8"
+
+FROM pytorch/pytorch:${PYTORCH}-cuda${CUDA}-cudnn${CUDNN}-devel
+
+# Set environment variables (from working Dockerfile + API additions)
+ENV TORCH_CUDA_ARCH_LIST="6.0 6.1 7.0 7.5 8.0 8.6+PTX" \
+    TORCH_NVCC_FLAGS="-Xfatbin -compress-all" \
+    CMAKE_PREFIX_PATH="$(dirname $(which conda))/../" \
+    FORCE_CUDA="1" \
+    DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC
+
+# To fix GPG key error when running apt-get update (from working Dockerfile)
+RUN rm /etc/apt/sources.list.d/cuda.list \
+    && rm /etc/apt/sources.list.d/nvidia-ml.list \
+    && apt-key del 7fa2af80 \
+    && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub \
+    && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/7fa2af80.pub
+
+# Install system dependencies (combining both approaches)
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    git \
+    ninja-build \
+    libglib2.0-0 \
+    libxrender-dev \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install MMCV (from working Dockerfile)
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools
+RUN pip install --no-cache-dir mmcv-full==1.5.0 -f https://download.openmmlab.com/mmcv/dist/cu113/torch1.11.0/index.html
+
+# Install MMDetection (from working Dockerfile)
+RUN conda clean --all
+RUN pip install openmim
+RUN pip install timm
+RUN mim install mmdet==2.25.3
+RUN pip install fairscale==0.4.13
+RUN pip install scipy==1.10.1
+
+# Install etc (from working Dockerfile)
+RUN pip install yapf==0.40.1
+
+# Set working directory
+WORKDIR /Co-DETR
+
+# Copy the entire Co-DETR project
+COPY . /Co-DETR/
+
+# Install Co-DETR (now that all dependencies are ready)
+RUN pip install -v -e .
+
+# Install API-specific dependencies
+RUN pip install -r requirements/api.txt
+
+# Expose the API port
+EXPOSE 8000
+
+# Set environment variables
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTHONPATH=/Co-DETR
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the API server
+CMD ["python", "api_server.py"]

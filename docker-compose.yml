@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  co-detr-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONPATH=/Co-DETR
+    volumes:
+      # Mount model files if they're external
+      - ./pytorch_model.pth:/Co-DETR/pytorch_model.pth:ro
+      # Optional: mount input/output directories
+      - ./input_images:/Co-DETR/input_images:ro
+      - ./result_images:/Co-DETR/result_images
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -1,0 +1,68 @@
+# Exclude large model files and datasets
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.bin
+
+# Exclude dataset directories
+data/
+datasets/
+input_images/
+result_images/
+output/
+outputs/
+
+# Exclude build artifacts and caches
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+
+# Exclude development files
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Exclude Docker files
+Dockerfile
+docker-compose.yml
+docker-output.txt
+
+# Exclude documentation but keep essential files
+docs/
+# *.md - commented out to allow README.md for setup.py
+API_README.md
+
+# Exclude specific problematic directories
+mmdet/.mim/
+.mim/
+
+# Exclude any jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Exclude any wandb logs
+wandb/
+
+# Exclude any tensorboard logs
+runs/
+logs/

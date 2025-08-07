@@ -1,0 +1,8 @@
+# FastAPI and web server dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Image processing
+Pillow
+opencv-python
