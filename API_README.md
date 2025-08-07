@@ -218,7 +218,7 @@ Once the server is running, visit:
 - **Interactive API Docs**: `http://localhost:8000/docs`
 - **ReDoc Documentation**: `http://localhost:8000/redoc`
 
-## Security Considerations
+## Opportunities for Improvement
 
 For production deployment:
 
@@ -226,14 +226,8 @@ For production deployment:
 2. Implement rate limiting
 3. Add input validation and sanitization
 4. Use HTTPS with proper certificates
-5. Configure firewall rules
 
-## Comparison with CLI Usage
+General:
 
-| CLI Command                                                               | API Equivalent                            |
-| ------------------------------------------------------------------------- | ----------------------------------------- |
-| `python demo/image_demo.py image.jpg config.py model.pth --score-thr 0.2` | `POST /detect` with `score_threshold=0.2` |
-| `--out-file result.jpg`                                                   | Save API response as image file           |
-| `--device cuda:0`                                                         | Configured in server startup              |
-
-The API provides the same detection capabilities as the CLI but with the convenience of HTTP requests.
+1. Create API test suite
+2. Create new endpoints to cover more functionality of Co-DETR
