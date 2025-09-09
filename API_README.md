@@ -52,7 +52,7 @@ python api_server.py
 
 The server will be available at `http://localhost:8000`
 
-### 2. Docker Deployment
+### 2. Docker Deployment (Recommended)
 
 #### Option A: Docker Compose (Recommended)
 
