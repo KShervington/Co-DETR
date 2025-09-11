@@ -5,6 +5,7 @@ A FastAPI server that exposes the Co-DETR object detection model via REST API en
 ## Features
 
 - **Fast and Scalable**: Built with FastAPI for high performance
+- **Secure Authentication**: API key-based authentication system
 - **Docker Support**: Fully containerized for easy deployment
 - **Image Upload**: Accept various image formats via HTTP POST
 - **Configurable**: Adjustable detection thresholds and output formats
@@ -30,17 +31,36 @@ POST /detect
 
 Upload an image and receive the image with detection overlays.
 
+**Authentication Required:** Yes (API Key)
+
 **Parameters:**
 
 - `file` (required): Image file (JPEG, PNG, etc.)
 - `score_threshold` (optional): Detection confidence threshold (0.0-1.0, default: 0.2)
 - `output_format` (optional): Output format ("JPEG" or "PNG", default: "JPEG")
 
+**Headers:**
+- `Authorization: Bearer <your_api_key>` (required)
+
 **Response:** Image with detection bounding boxes and labels
 
 ## Quick Start
 
-### 1. Local Development Setup
+### 1. Generate an API Key
+
+Before using the API, you need to generate an API key:
+
+```bash
+# Create a new API key
+python manage_api_keys.py create "My First Key"
+
+# List all API keys
+python manage_api_keys.py list
+```
+
+**Important:** Save the generated API key securely - you won't be able to retrieve it again!
+
+### 2. Local Development Setup
 
 ```bash
 # Install API dependencies
@@ -81,11 +101,12 @@ docker run --gpus all -p 8000:8000 \
 #### Test with curl
 
 ```bash
-# Health check
+# Health check (no authentication required)
 curl http://localhost:8000/health
 
-# Object detection
+# Object detection (authentication required)
 curl -X POST "http://localhost:8000/detect?score_threshold=0.3" \
+  -H "Authorization: Bearer your_api_key_here" \
   -H "accept: image/jpeg" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@your_image.jpg" \
@@ -97,17 +118,18 @@ curl -X POST "http://localhost:8000/detect?score_threshold=0.3" \
 ```python
 import requests
 
-# Health check
+# Health check (no authentication required)
 response = requests.get("http://localhost:8000/health")
 print(response.json())
 
-# Object detection
+# Object detection (authentication required)
 url = "http://localhost:8000/detect"
 params = {"score_threshold": 0.3, "output_format": "JPEG"}
+headers = {"Authorization": "Bearer your_api_key_here"}
 
 with open("your_image.jpg", "rb") as f:
     files = {"file": f}
-    response = requests.post(url, files=files, params=params)
+    response = requests.post(url, files=files, params=params, headers=headers)
 
 # Save result
 with open("result.jpg", "wb") as f:
@@ -122,6 +144,9 @@ formData.append("file", fileInput.files[0]);
 
 fetch("http://localhost:8000/detect?score_threshold=0.3", {
   method: "POST",
+  headers: {
+    "Authorization": "Bearer your_api_key_here"
+  },
   body: formData,
 })
   .then((response) => response.blob())
@@ -218,11 +243,44 @@ Once the server is running, visit:
 - **Interactive API Docs**: `http://localhost:8000/docs`
 - **ReDoc Documentation**: `http://localhost:8000/redoc`
 
+## API Key Management
+
+### Creating API Keys
+
+```bash
+# Create a permanent API key
+python manage_api_keys.py create "Production Key"
+
+# Create a temporary API key (expires in 30 days)
+python manage_api_keys.py create "Test Key" --expires-days 30
+```
+
+### Managing API Keys
+
+```bash
+# List all API keys
+python manage_api_keys.py list
+
+# Revoke an API key
+python manage_api_keys.py revoke <key_id>
+
+# Clean up expired keys
+python manage_api_keys.py cleanup
+```
+
+### Security Best Practices
+
+1. **Store API keys securely**: Never commit API keys to version control
+2. **Use environment variables**: Store keys in environment variables for production
+3. **Regular rotation**: Rotate API keys periodically
+4. **Monitor usage**: Check API key usage statistics regularly
+5. **Revoke unused keys**: Remove API keys that are no longer needed
+
 ## Opportunities for Improvement
 
 For production deployment:
 
-1. Add authentication/authorization
+1. ✅ ~~Add authentication/authorization~~ (Completed)
 2. Implement rate limiting
 3. Add input validation and sanitization
 4. Use HTTPS with proper certificates

@@ -14,13 +14,14 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, File, UploadFile, HTTPException, Query
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Depends
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from mmdet.apis import inference_detector, init_detector
 from mmdet.apis import show_result_pyplot
+from auth import create_api_key_authenticator, ApiKey
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -166,6 +167,9 @@ app.add_middleware(
 inference_service: Optional[CoDetrInferenceService] = None
 image_processor = ImageProcessor()
 
+# Initialize API key authentication
+api_key_auth = create_api_key_authenticator()
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize the model on startup."""
@@ -211,7 +215,8 @@ async def health_check():
 async def detect_objects(
     file: UploadFile = File(..., description="Image file for object detection"),
     score_threshold: float = Query(0.2, ge=0.0, le=1.0, description="Detection confidence threshold"),
-    output_format: str = Query("JPEG", regex="^(JPEG|PNG)$", description="Output image format")
+    output_format: str = Query("JPEG", regex="^(JPEG|PNG)$", description="Output image format"),
+    api_key: ApiKey = Depends(api_key_auth)
 ):
     """
     Detect objects in uploaded image and return image with detection overlays.
@@ -220,10 +225,12 @@ async def detect_objects(
         file: Uploaded image file
         score_threshold: Confidence threshold for detections (0.0-1.0)
         output_format: Output image format (JPEG or PNG)
+        api_key: Authenticated API key (automatically injected)
         
     Returns:
         Image with detection overlays
     """
+    logger.info(f"Detection request from API key: {api_key.name}")
     if inference_service is None or inference_service.model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
     
