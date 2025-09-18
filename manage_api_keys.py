@@ -138,6 +138,7 @@ def main():
     create_parser.add_argument(
         '--expires-days',
         type=int,
+        default=30,
         help='Number of days until the key expires (optional)'
     )
     create_parser.set_defaults(func=create_key)
