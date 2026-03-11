@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+import matplotlib.figure
 
 from mmdet.apis import inference_detector, init_detector
 from mmdet.apis import show_result_pyplot
@@ -313,10 +314,58 @@ async def get_co2_surface(data: SensorData):
     
     predicted_values = reg.predict(grid_points)
     
+    # --- NEW: Generate Contours for Cesium (GeoJSON format) ---
+    zz = predicted_values.reshape(grid_resolution, grid_resolution)
+    
+    # Create a headless figure to calculate contour paths without memory leaks
+    fig = matplotlib.figure.Figure()
+    ax = fig.add_subplot(111)
+    
+    contour_set = ax.contourf(xx, yy, zz, levels=20, cmap='viridis')
+    
+    features = []
+    
+    for i, collection in enumerate(contour_set.collections):
+        level_val = contour_set.levels[i] if i < len(contour_set.levels) else contour_set.levels[-1]
+        
+        # Extract the hex color from the colormap
+        facecolors = collection.get_facecolor()
+        if len(facecolors) > 0:
+            r, g, b, a = facecolors[0]
+            color_hex = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+        else:
+            color_hex = "#cccccc"
+            
+        # Convert Matplotlib paths to GeoJSON polygons
+        for path in collection.get_paths():
+            polygons = path.to_polygons()
+            if not polygons:
+                continue
+            
+            for poly in polygons:
+                features.append({
+                    "type": "Feature",
+                    "properties": {
+                        "level": float(level_val),
+                        "fill": color_hex,
+                        "fill-opacity": 0.6
+                    },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [poly.tolist()]
+                    }
+                })
+                
+    geojson_contours = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    
     return {
         "status": "success", 
         "grid_points": grid_points.tolist(),
-        "predictions": predicted_values.tolist()
+        "predictions": predicted_values.tolist(),
+        "contours": geojson_contours
     }
 
 if __name__ == "__main__":
