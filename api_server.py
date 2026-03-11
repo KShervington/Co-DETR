@@ -10,7 +10,7 @@ import io
 import os
 import tempfile
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import cv2
 import numpy as np
@@ -177,8 +177,8 @@ api_key_auth = create_api_key_authenticator()
 
 # Added Pydantic model for CO2 telemetry
 class SensorData(BaseModel):
-    coordinates: list[list[float]]
-    values: list[float]
+    coordinates: List[List[float]]
+    values: List[float]
 
 @app.on_event("startup")
 async def startup_event():
@@ -269,18 +269,40 @@ async def detect_objects(
         logger.error(f"Detection failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
 
-# Added endpoint for CO2 interpolation
 @app.post("/api/interpolate-co2")
 async def get_co2_surface(data: SensorData):
     coords_array = np.array(data.coordinates)
     values_array = np.array(data.values)
     
-    kernel = RBF(length_scale=[20.0, 20.0])
-    reg = GaussianProcessRegressor(kernel=kernel, alpha=0.01)
-    reg.fit(X=coords_array, y=values_array)
-    
     x_min, x_max = np.min(coords_array[:, 0]), np.max(coords_array[:, 0])
     y_min, y_max = np.min(coords_array[:, 1]), np.max(coords_array[:, 1])
+    
+    x_range = x_max - x_min
+    y_range = y_max - y_min
+    
+    # 1. Establish a sane floor and ceiling
+    lower_bound = 0.002 
+    upper_bound = max(max(x_range, y_range), 0.05)
+    
+    # 2. Calculate a SINGLE starting length scale (averaging the spatial ranges)
+    l_scale_start = max((x_range + y_range) / 4, lower_bound)
+    
+    # 3. Pass a single value to length_scale to force circular (isotropic) interpolation
+    kernel = RBF(
+        length_scale=l_scale_start,
+        length_scale_bounds=(lower_bound, upper_bound) 
+    )
+    
+    # 4. Small alpha to trust sensor readings
+    reg = GaussianProcessRegressor(
+        kernel=kernel, 
+        alpha=1e-4, 
+        normalize_y=True,
+        n_restarts_optimizer=5,
+        random_state=42
+    )
+    
+    reg.fit(X=coords_array, y=values_array)
     
     grid_resolution = 50
     x_grid = np.linspace(x_min, x_max, grid_resolution)
