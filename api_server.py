@@ -15,6 +15,7 @@ from typing import Optional
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Depends
+from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -22,6 +23,10 @@ from PIL import Image
 from mmdet.apis import inference_detector, init_detector
 from mmdet.apis import show_result_pyplot
 from auth import create_api_key_authenticator, ApiKey
+
+# Added imports for CO2 Interpolation
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -170,6 +175,11 @@ image_processor = ImageProcessor()
 # Initialize API key authentication
 api_key_auth = create_api_key_authenticator()
 
+# Added Pydantic model for CO2 telemetry
+class SensorData(BaseModel):
+    coordinates: list[list[float]]
+    values: list[float]
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize the model on startup."""
@@ -258,6 +268,34 @@ async def detect_objects(
     except Exception as e:
         logger.error(f"Detection failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Detection failed: {str(e)}")
+
+# Added endpoint for CO2 interpolation
+@app.post("/api/interpolate-co2")
+async def get_co2_surface(data: SensorData):
+    coords_array = np.array(data.coordinates)
+    values_array = np.array(data.values)
+    
+    kernel = RBF(length_scale=[20.0, 20.0])
+    reg = GaussianProcessRegressor(kernel=kernel, alpha=0.01)
+    reg.fit(X=coords_array, y=values_array)
+    
+    x_min, x_max = np.min(coords_array[:, 0]), np.max(coords_array[:, 0])
+    y_min, y_max = np.min(coords_array[:, 1]), np.max(coords_array[:, 1])
+    
+    grid_resolution = 50
+    x_grid = np.linspace(x_min, x_max, grid_resolution)
+    y_grid = np.linspace(y_min, y_max, grid_resolution)
+    
+    xx, yy = np.meshgrid(x_grid, y_grid)
+    grid_points = np.c_[xx.ravel(), yy.ravel()]
+    
+    predicted_values = reg.predict(grid_points)
+    
+    return {
+        "status": "success", 
+        "grid_points": grid_points.tolist(),
+        "predictions": predicted_values.tolist()
+    }
 
 if __name__ == "__main__":
     import uvicorn
