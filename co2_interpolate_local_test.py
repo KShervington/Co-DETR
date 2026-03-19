@@ -3,7 +3,8 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF
 import matplotlib.pyplot as plt
 
-# Hardcoded JSON data from your query
+# Sampled March 10th, 9:03PM
+# this is leaving out 1 sensor which had a ludicrous value
 HARDCODED_DATA = {
     "coordinates": [
         [28.60063362121582, -81.20477294921875], [28.60141944885254, -81.19973754882812],
@@ -30,21 +31,21 @@ def run_interpolation_test():
     x_range = x_max - x_min
     y_range = y_max - y_min
     
-    # 1. Establish a sane floor and ceiling
+    #Establish a good floor and ceiling
     lower_bound = 0.002 
     upper_bound = max(max(x_range, y_range), 0.05)
     
-    # 2. Calculate a SINGLE starting length scale (averaging the spatial ranges)
+    # Calculate a SINGLE starting length scale (average the spatial ranges)
     l_scale_start = max((x_range + y_range) / 4, lower_bound)
     
-    # 3. Pass a single value to length_scale to force circular (isotropic) interpolation
+    # force circular/isotropic interpolation; this fixes the stretching issue
     kernel = RBF(
         length_scale=l_scale_start,
         length_scale_bounds=(lower_bound, upper_bound) 
     )
     
-    print("Fitting Gaussian Process Regressor...")
-    # 4. Small alpha to trust sensor readings
+    print("Fitting Gaussian Process regressor...")
+    # A low alpha means more tolerance of noisy data
     reg = GaussianProcessRegressor(
         kernel=kernel, 
         alpha=1e-4, 
@@ -57,15 +58,16 @@ def run_interpolation_test():
     
     print("Predicting grid...")
     grid_resolution = 50
-    x_grid = np.linspace(x_min, x_max, grid_resolution)
-    y_grid = np.linspace(y_min, y_max, grid_resolution)
+    buffer = 0.005
+    x_grid = np.linspace(x_min - buffer, x_max + buffer, grid_resolution)
+    y_grid = np.linspace(y_min - buffer, y_max + buffer, grid_resolution)
     
     xx, yy = np.meshgrid(x_grid, y_grid)
     grid_points = np.c_[xx.ravel(), yy.ravel()]
     
     predicted_values = reg.predict(grid_points)
     
-    # --- Visualization (Added for local testing) ---
+    # --- VISUALIZATION (for local testing only)
     print("Generating plot...")
     plt.figure(figsize=(10, 8))
     
@@ -81,7 +83,7 @@ def run_interpolation_test():
                           c=values_array, cmap='viridis', edgecolors='white', 
                           linewidth=1.5, s=100, label='Sensors')
     
-    plt.title("CO2 Surface Interpolation Test")
+    plt.title("CO2 Surface Interpolation Local Test")
     plt.xlabel("Latitude")
     plt.ylabel("Longitude")
     plt.legend()
@@ -96,4 +98,4 @@ def run_interpolation_test():
 
 if __name__ == "__main__":
     result = run_interpolation_test()
-    print("Test completed successfully:", result)
+    print("SUCCESS! Test completed:", result)
